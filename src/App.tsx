@@ -1,80 +1,98 @@
 import { useState, useRef, useEffect } from "react";
 import Moveable from "react-moveable";
 import Selecto from "react-selecto";
-
 const tiles = [
-  "Man1.svg",
-  "Man2.svg",
-  "Man3.svg",
-  "Man4.svg",
-  "Man5.svg",
-  "Man5-Dora.svg",
-  "Man6.svg",
-  "Man7.svg",
-  "Man8.svg",
-  "Man9.svg",
+  "tiles/Man1.svg",
+  "tiles/Man2.svg",
+  "tiles/Man3.svg",
+  "tiles/Man4.svg",
+  "tiles/Man5.svg",
+  "tiles/Man5-Dora.svg",
+  "tiles/Man6.svg",
+  "tiles/Man7.svg",
+  "tiles/Man8.svg",
+  "tiles/Man9.svg",
 
-  "Pin1.svg",
-  "Pin2.svg",
-  "Pin3.svg",
-  "Pin4.svg",
-  "Pin5.svg",
-  "Pin5-Dora.svg",
-  "Pin6.svg",
-  "Pin7.svg",
-  "Pin8.svg",
-  "Pin9.svg",
+  "tiles/Pin1.svg",
+  "tiles/Pin2.svg",
+  "tiles/Pin3.svg",
+  "tiles/Pin4.svg",
+  "tiles/Pin5.svg",
+  "tiles/Pin5-Dora.svg",
+  "tiles/Pin6.svg",
+  "tiles/Pin7.svg",
+  "tiles/Pin8.svg",
+  "tiles/Pin9.svg",
 
-  "Sou1.svg",
-  "Sou2.svg",
-  "Sou3.svg",
-  "Sou4.svg",
-  "Sou5.svg",
-  "Sou5-Dora.svg",
-  "Sou6.svg",
-  "Sou7.svg",
-  "Sou8.svg",
-  "Sou9.svg",
+  "tiles/Sou1.svg",
+  "tiles/Sou2.svg",
+  "tiles/Sou3.svg",
+  "tiles/Sou4.svg",
+  "tiles/Sou5.svg",
+  "tiles/Sou5-Dora.svg",
+  "tiles/Sou6.svg",
+  "tiles/Sou7.svg",
+  "tiles/Sou8.svg",
+  "tiles/Sou9.svg",
 
-  "Ton.svg",
-  "Nan.svg",
-  "Shaa.svg",
-  "Pei.svg",
-  "Haku.svg",
-  "Hatsu.svg",
-  "Chun.svg",
+  "tiles/Ton.svg",
+  "tiles/Nan.svg",
+  "tiles/Shaa.svg",
+  "tiles/Pei.svg",
+  "tiles/Haku.svg",
+  "tiles/Hatsu.svg",
+  "tiles/Chun.svg",
 
-  "Back.svg",
+  "tiles/Back.svg",
 ];
 
+type Image = {
+  id: number;
+  src: string;
+  style?: React.CSSProperties;
+};
+
 export default function App() {
-  const [images, setImages] = useState([]);
-  const [targets, setTargets] = useState([]);
-  const [elementGuidelines, setElementGuidelines] = useState([]);
-  const [verticalGuidelines, setVerticalGuidelines] = useState([]);
-  const [horizontalGuidelines, setHorizontalGuidelines] = useState([]);
-  const moveableRef = useRef(null);
-  const selectoRef = useRef(null);
-  const containerRef = useRef(null);
-
+  const [images, setImages] = useState<Image[]>([]);
+  const [targets, setTargets] = useState<(HTMLElement | SVGElement)[]>([]);
+  const [imageElements, setImageElements] = useState<Element[]>([]);
+  const [elementGuidelines, setElementGuidelines] = useState<Element[]>([]);
+  const [verticalGuidelines, setVerticalGuidelines] = useState<number[]>([]);
+  const [horizontalGuidelines, setHorizontalGuidelines] = useState<number[]>([]);
+  const moveableRef = useRef<Moveable>(null);
+  const selectoRef = useRef<Selecto>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const idSequence = useRef(0);
+  const createSequence = useRef(0);
 
-  const handleDrop = (e) => {
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
+    const rect = containerRef.current!.getBoundingClientRect();
     const files = Array.from(e.dataTransfer.files).filter((f) => f.type.startsWith("image/"));
     files.forEach((file) => {
       const url = URL.createObjectURL(file);
-      setImages((prev) => [...prev, { id: idSequence.current, src: url }]);
-      idSequence.current += 1;
+
+      const tempImg = new Image();
+      tempImg.onload = () => {
+        const id = idSequence.current;
+        const x = rect.width / 2 - tempImg.width / 2;
+        const y = rect.height / 2 - tempImg.height / 2;
+        setImages((prev) => [...prev, { id: id, src: url, style: { top: `${y}px`, left: `${x}px` } }]);
+        idSequence.current += 1;
+      };
+      tempImg.src = url;
     });
   };
 
   useEffect(() => {
-    const handleKeyDown = (e) => {
+    setElementGuidelines(imageElements.filter((el) => !targets.includes(el as HTMLElement)));
+  }, [targets, imageElements]);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Delete" || e.key === "Backspace") {
         if (targets.length === 0) return;
         const removeIds = targets.map((t) => t.dataset.id);
-        console.log(removeIds, images);
         setImages((prev) => prev.filter((img) => !removeIds.includes(String(img.id))));
         setTargets([]);
       }
@@ -86,6 +104,7 @@ export default function App() {
   }, [targets]);
 
   useEffect(() => {
+    setImageElements(Array.from(document.querySelectorAll(".target")));
     setElementGuidelines(Array.from(document.querySelectorAll(".target")));
   }, [images]);
 
@@ -104,14 +123,18 @@ export default function App() {
     return () => resizeObserver.disconnect();
   }, []);
 
-  const ButtonImg = ({ src }) => {
+  const ButtonImg = ({ src }: { src: string }) => {
     return (
       <img
+        draggable={false}
         className="w-10"
         src={src}
         onClick={() => {
-          setImages((prev) => [...prev, { id: idSequence.current, src: src }]);
+          const id = idSequence.current;
+          const createSeq = createSequence.current;
+          setImages((prev) => [...prev, { id: id, src: src, style: { width: "40px", left: `${40 * createSeq}px` } }]);
           idSequence.current += 1;
+          createSequence.current += 1;
         }}
       />
     );
@@ -140,12 +163,14 @@ export default function App() {
           isDisplaySnapDigit={false}
           draggable={true}
           onClickGroup={(e) => {
-            selectoRef.current.clickTarget(e.inputEvent, e.inputTarget);
+            selectoRef.current?.clickTarget(e.inputEvent, e.inputTarget);
           }}
           onRender={(e) => {
+            createSequence.current = 0;
             e.target.style.cssText += e.cssText;
           }}
           onRenderGroup={(e) => {
+            createSequence.current = 0;
             e.events.forEach((ev) => {
               ev.target.style.cssText += ev.cssText;
             });
@@ -153,7 +178,7 @@ export default function App() {
         />
         <Selecto
           ref={selectoRef}
-          container={containerRef}
+          container={containerRef.current}
           selectableTargets={[".target"]}
           hitRate={0}
           selectByClick={true}
@@ -163,7 +188,7 @@ export default function App() {
           onDragStart={(e) => {
             const target = e.inputEvent.target;
             if (
-              moveableRef.current.isMoveableElement(target) ||
+              moveableRef.current?.isMoveableElement(target) ||
               targets.some((t) => t === target || t.contains(target))
             ) {
               e.stop();
@@ -178,22 +203,30 @@ export default function App() {
           onSelectEnd={(e) => {
             if (e.isDragStartEnd) {
               e.inputEvent.preventDefault();
-              moveableRef.current.waitToChangeTarget().then(() => {
-                moveableRef.current.dragStart(e.inputEvent);
+              moveableRef.current?.waitToChangeTarget().then(() => {
+                moveableRef.current?.dragStart(e.inputEvent);
               });
             }
             setTargets(e.selected);
           }}
         />
         {images &&
-          images.map((img) => <img className="absolute target w-10" src={img.src} data-id={img.id} key={img.id} />)}
+          images.map((img) => {
+            return (
+              <img
+                className={`absolute z-${img.id} target`}
+                style={{ zIndex: img.id, ...img.style }}
+                src={img.src}
+                data-id={img.id}
+                key={img.id}
+              />
+            );
+          })}
       </div>
-      <div className="bg-gray-100">
-        <div className=" inline-grid grid-cols-10 gap-x-4">
-          {tiles.map((tile) => (
-            <ButtonImg src={`tiles/${tile}`} key={tile} />
-          ))}
-        </div>
+      <div className="bg-gray-300 flex flex-cols w-screen overflow-auto gap-2 scrollbar pt-2 pb-1">
+        {tiles.map((tile) => (
+          <ButtonImg src={`${tile}`} key={tile} />
+        ))}
       </div>
     </div>
   );

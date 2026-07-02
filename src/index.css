@@ -1,4 +1,16 @@
 @import "tailwindcss";
 body {
   margin: 0;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+@layer utilities {
+  .scrollbar::-webkit-scrollbar {
+    height: 4px;
+  }
+
+  .scrollbar::-webkit-scrollbar-thumb {
+    background: #999;
+    border-radius: 3px;
+  }
 }
