@@ -59,6 +59,7 @@ export default function App() {
   const [elementGuidelines, setElementGuidelines] = useState<Element[]>([]);
   const [verticalGuidelines, setVerticalGuidelines] = useState<number[]>([]);
   const [horizontalGuidelines, setHorizontalGuidelines] = useState<number[]>([]);
+  const scrollRef = useRef<HTMLDivElement>(null);
   const moveableRef = useRef<Moveable>(null);
   const selectoRef = useRef<Selecto>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -109,18 +110,25 @@ export default function App() {
   }, [images]);
 
   useEffect(() => {
-    setElementGuidelines(Array.from(document.querySelectorAll(".target")));
-
     const updateGuidelines = () => {
-      setVerticalGuidelines([0, containerRef.current.offsetWidth]);
-      setHorizontalGuidelines([0, containerRef.current.offsetHeight]);
+      setVerticalGuidelines([0, containerRef.current!.offsetWidth]);
+      setHorizontalGuidelines([0, containerRef.current!.offsetHeight]);
+    };
+
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      scrollRef.current!.scrollLeft += e.deltaY;
     };
 
     updateGuidelines();
 
+    scrollRef.current!.addEventListener("wheel", onWheel, { passive: false });
     const resizeObserver = new ResizeObserver(updateGuidelines);
-    resizeObserver.observe(containerRef.current);
-    return () => resizeObserver.disconnect();
+    resizeObserver.observe(containerRef.current!);
+    return () => {
+      resizeObserver.disconnect();
+      scrollRef.current!.removeEventListener("wheel", onWheel);
+    };
   }, []);
 
   const ButtonImg = ({ src }: { src: string }) => {
@@ -219,11 +227,15 @@ export default function App() {
                 src={img.src}
                 data-id={img.id}
                 key={img.id}
+                onDoubleClick={() => {
+                  setImages((prev) => prev.filter((image) => image.id !== img.id));
+                  setTargets([]);
+                }}
               />
             );
           })}
       </div>
-      <div className="bg-gray-300 flex flex-cols w-screen overflow-auto gap-2 scrollbar pt-2 pb-1">
+      <div ref={scrollRef} className="bg-gray-300 flex flex-cols w-screen overflow-auto gap-2 scrollbar pt-2 pb-1">
         {tiles.map((tile) => (
           <ButtonImg src={`${tile}`} key={tile} />
         ))}
